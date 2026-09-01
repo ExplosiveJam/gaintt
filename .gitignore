@@ -1,0 +1,12 @@
+.venv/
+.pnpm-store/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+node_modules/
+frontend/dist/
+frontend/test-results/
+frontend/playwright-report/
+data/*.sqlite*
+.env
