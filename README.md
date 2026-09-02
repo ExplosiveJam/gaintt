@@ -32,7 +32,8 @@ demo interpreter, поэтому smoke-тест не ходит в сеть.
 make test
 ```
 
-Для Playwright один раз установите браузер: `pnpm exec playwright install chromium`.
+Для Playwright один раз установите браузер:
+`cd frontend && pnpm exec playwright install chromium`.
 
 Пример входного файла — [examples/gaintt-example.xlsx](examples/gaintt-example.xlsx).
 
@@ -60,9 +61,11 @@ Honker (durable pub/sub поверх того же SQLite-файла) после
 - это осознанный компромисс ради совместности без полноценной аутентификации, а
   не забытая проверка — см. roadmap, раздел «Аутентификация и доступ».
 
-Приложение по-прежнему держится на одном процессе и одном SQLite-файле —
-Honker слушает уведомления в том же файле, поэтому второй инстанс не увидел бы
-сигналов о правках с первого. Это первый пункт [roadmap](docs/ROADMAP.md).
+Процессы на одной машине синхронизируются, пока используют один SQLite-файл —
+это проверено отдельным cross-process тестом. Ограничение проходит по границе
+общего файла: инстанс на другом хосте со своей копией SQLite не увидит ни запись,
+ни Honker-сигнал. Переход к нескольким хостам — второй пункт
+[roadmap](docs/ROADMAP.md).
 
 ## Архитектура
 
@@ -74,8 +77,8 @@ React + SVAR Gantt
 FastAPI ── AgentService ── model: JSON {mutations, reply}
    │              │
    │              └── InMemoryMCPClient ── FastMCP tools ── PlanService
-   ├── PlanService ── SQLite (one process, one file)  │
-   │        └── PlanNotifier ── Honker (same file) ── same apply_turn seam
+   ├── PlanService ── SQLite (shared file on one host)
+   │        └── PlanNotifier ── Honker (same file) ── SSE signal ── Plan refetch
    ├── Excel adapter
    └── static frontend
 ```
@@ -129,30 +132,68 @@ AI здесь использовался как инженерный партн�
 
 ## Демо
 
-Главный сценарий — Excel → чат → экспорт — автоматически проверяется без сети в
-[frontend/tests/smoke.spec.ts](frontend/tests/smoke.spec.ts). Отдельный
-[live-demo сценарий](frontend/tests/live-demo.spec.ts) открывает публичный Render
-двумя изолированными browser context: клиент A отправляет реальную команду через
-OpenRouter, а клиент B только слушает SSE и без reload получает новую версию
-Plan. Видео ниже записано из успешного live-запуска этого сценария. Оно
-подтверждает работу credentials и provider на момент записи, но не заменяет
-постоянный мониторинг quota, latency и доступности OpenRouter.
+### Основной сценарий из задания
+
+Excel → чат → экспорт автоматически проверяется без сети в
+[frontend/tests/smoke.spec.ts](frontend/tests/smoke.spec.ts). Видео показывает
+все три подтверждённых шага: загрузку трёх задач из Excel, перенос задачи через
+чат и скачивание `gaintt-plan.xlsx`. Оно работает на deterministic interpreter и
+проверяет UI → AgentService → MCP → PlanService без расхода OpenRouter.
 
 <video controls src="docs/demo.mp4" width="900"></video>
 
 [Скачать demo.mp4](docs/demo.mp4)
 
-![Gaintt: живой агент и синхронизация двух клиентов](docs/demo.gif)
+![Gaintt: Excel → чат → экспорт](docs/demo.gif)
+
+Запись воспроизводится из `frontend/`:
+
+```bash
+GAINTT_RECORD_DEMO=1 pnpm exec playwright test tests/smoke.spec.ts \
+  --grep 'Excel → chat → export' --output=../.demo-output/main
+```
+
+### Живой агент и синхронизация клиентов
+
+[live-demo сценарий](frontend/tests/live-demo.spec.ts) открывает публичный Render
+двумя изолированными browser context: клиент A отправляет реальную команду через
+OpenRouter, а клиент B только слушает SSE и без reload получает новую версию
+Plan. Эта запись подтверждает работу credentials и provider на момент запуска,
+но не заменяет постоянный мониторинг quota, latency и доступности OpenRouter.
+
+<video controls src="docs/collaboration-demo.mp4" width="900"></video>
+
+[Скачать collaboration-demo.mp4](docs/collaboration-demo.mp4)
+
+![Gaintt: живой агент и синхронизация двух клиентов](docs/collaboration-demo.gif)
+
+Платный live-сценарий и сборка двух записей side-by-side:
+
+```bash
+GAINTT_LIVE_DEMO_URL=https://gaintt.onrender.com/ \
+GAINTT_DEMO_VIDEO_DIR=../.demo-output/live \
+  pnpm exec playwright test tests/live-demo.spec.ts
+
+cd ..
+GAINTT_DEMO_START=0 scripts/compose_collaboration_demo.sh \
+  .demo-output/live/client-a.webm .demo-output/live/client-b.webm \
+  docs/collaboration-demo
+```
+
+Playwright печатает фактические пути двух WebM. Если cold start попал в запись,
+перед сборкой задайте `GAINTT_DEMO_START` и, при необходимости,
+`GAINTT_DEMO_DURATION`.
 
 ## Roadmap to production
 
 Полная последовательность технического долга находится в
 [docs/ROADMAP.md](docs/ROADMAP.md). Первым пунктом стоит долговечность данных:
-бесплатный demo хранит SQLite в эфемерном `/tmp`. Следом идёт ограничение одного
-процесса — совместное редактирование внутри него уже есть
+бесплатный demo хранит SQLite в эфемерном `/tmp`. Следом идёт привязка к одной
+машине и общему SQLite-файлу — совместное редактирование внутри этой границы уже
+есть
 ([ADR-0003](docs/adr/0003-honker-collaborative-editing.md)), но горизонтальное
-масштабирование по-прежнему невозможно: и запись, и доставка Honker-сигналов
-привязаны к одной машине.
+масштабирование по нескольким хостам по-прежнему невозможно: и запись, и
+доставка Honker-сигналов требуют общего файла.
 
 ## Container / deploy
 

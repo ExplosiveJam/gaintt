@@ -95,6 +95,10 @@ test("live demo shows the agent edit arriving in an idle second client", async (
     await clientB.close();
   }
 
-  console.log(`CLIENT_A_VIDEO=${await videoA?.path()}`);
-  console.log(`CLIENT_B_VIDEO=${await videoB?.path()}`);
+  const clientAVideo = path.join(videoDir, "client-a.webm");
+  const clientBVideo = path.join(videoDir, "client-b.webm");
+  await videoA?.saveAs(clientAVideo);
+  await videoB?.saveAs(clientBVideo);
+  console.log(`CLIENT_A_VIDEO=${clientAVideo}`);
+  console.log(`CLIENT_B_VIDEO=${clientBVideo}`);
 });
