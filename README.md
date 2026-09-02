@@ -129,19 +129,20 @@ AI здесь использовался как инженерный партн�
 
 ## Демо
 
-Главный сценарий — Excel → чат → экспорт — автоматически проверяется в
-[frontend/tests/smoke.spec.ts](frontend/tests/smoke.spec.ts). Видео ниже записано
-из этого Playwright-сценария и показывает загрузку Plan, применение Turn на
-диаграмме и скачивание Excel. Smoke, GIF и MP4 записаны без
-`OPENROUTER_API_KEY`, то есть на deterministic demo interpreter. Они проверяют
-интеграцию UI → AgentService → MCP → PlanService, но не являются проверкой живой
-модели, OpenRouter credentials, quota, timeout или provider behavior.
+Главный сценарий — Excel → чат → экспорт — автоматически проверяется без сети в
+[frontend/tests/smoke.spec.ts](frontend/tests/smoke.spec.ts). Отдельный
+[live-demo сценарий](frontend/tests/live-demo.spec.ts) открывает публичный Render
+двумя изолированными browser context: клиент A отправляет реальную команду через
+OpenRouter, а клиент B только слушает SSE и без reload получает новую версию
+Plan. Видео ниже записано из успешного live-запуска этого сценария. Оно
+подтверждает работу credentials и provider на момент записи, но не заменяет
+постоянный мониторинг quota, latency и доступности OpenRouter.
 
 <video controls src="docs/demo.mp4" width="900"></video>
 
 [Скачать demo.mp4](docs/demo.mp4)
 
-![Gaintt: Excel → чат → экспорт](docs/demo.gif)
+![Gaintt: живой агент и синхронизация двух клиентов](docs/demo.gif)
 
 ## Roadmap to production
 

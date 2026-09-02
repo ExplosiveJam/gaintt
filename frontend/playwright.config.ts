@@ -12,10 +12,13 @@ export default defineConfig({
       ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH }
       : undefined
   },
-  webServer: {
-    command: "cd .. && OPENROUTER_API_KEY= GAINTT_DB_PATH=/tmp/gaintt-e2e.sqlite UV_CACHE_DIR=/tmp/gaintt-uv-cache uv run uvicorn gaintt.main:app --host 127.0.0.1 --port 8765",
-    url: "http://127.0.0.1:8765/health",
-    reuseExistingServer: false,
-    timeout: 30_000
-  }
+  webServer: process.env.GAINTT_LIVE_DEMO_URL
+    ? undefined
+    : {
+        command:
+          "cd .. && OPENROUTER_API_KEY= GAINTT_DB_PATH=/tmp/gaintt-e2e.sqlite UV_CACHE_DIR=/tmp/gaintt-uv-cache uv run uvicorn gaintt.main:app --host 127.0.0.1 --port 8765",
+        url: "http://127.0.0.1:8765/health",
+        reuseExistingServer: false,
+        timeout: 30_000,
+      },
 });
