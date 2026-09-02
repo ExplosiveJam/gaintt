@@ -26,7 +26,7 @@ MUTATION_VARIANTS = [
     {
         "type": "object",
         "properties": {
-            "type": {"const": "add_task"},
+            "type": {"type": "string", "const": "add_task"},
             "name": {"type": "string"},
             "description": {"type": "string"},
             "assignee": {"type": "string"},
@@ -41,7 +41,11 @@ MUTATION_VARIANTS = [
     *[
         {
             "type": "object",
-            "properties": {"type": {"const": kind}, "task_id": {"type": "string"}, field: schema},
+            "properties": {
+                "type": {"type": "string", "const": kind},
+                "task_id": {"type": "string"},
+                field: schema,
+            },
             "required": ["type", "task_id", field],
             "additionalProperties": False,
         }
@@ -56,7 +60,7 @@ MUTATION_VARIANTS = [
     *[
         {
             "type": "object",
-            "properties": {"type": {"const": kind}, "task_id": {"type": "string"}},
+            "properties": {"type": {"type": "string", "const": kind}, "task_id": {"type": "string"}},
             "required": ["type", "task_id"],
             "additionalProperties": False,
         }
@@ -80,6 +84,25 @@ AGENT_RESPONSE_FORMAT = {
         },
     },
 }
+
+
+def _openrouter_error_detail(response: httpx.Response) -> str:
+    try:
+        error = response.json().get("error", {})
+    except (json.JSONDecodeError, AttributeError):
+        return response.reason_phrase or "request failed"
+    metadata = error.get("metadata", {}) if isinstance(error, dict) else {}
+    raw = metadata.get("raw") if isinstance(metadata, dict) else None
+    if isinstance(raw, str):
+        try:
+            provider_error = json.loads(raw).get("error", {})
+        except (json.JSONDecodeError, AttributeError):
+            provider_error = {}
+        provider_message = provider_error.get("message") if isinstance(provider_error, dict) else None
+        if isinstance(provider_message, str) and provider_message:
+            return provider_message
+    message = error.get("message") if isinstance(error, dict) else None
+    return message if isinstance(message, str) and message else response.reason_phrase or "request failed"
 
 
 class AgentService:
@@ -139,7 +162,8 @@ class AgentService:
                     "response_format": AGENT_RESPONSE_FORMAT,
                 },
             )
-            response.raise_for_status()
+            if response.is_error:
+                raise RuntimeError(f"OpenRouter {response.status_code}: {_openrouter_error_detail(response)}")
             content = response.json()["choices"][0]["message"]["content"]
         return json.loads(content)
 

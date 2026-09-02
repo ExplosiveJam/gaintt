@@ -1,11 +1,35 @@
 import json
 from datetime import date, timedelta
 
+import httpx
 import pytest
 
-from gaintt.agent import AgentService
+from gaintt.agent import MUTATION_VARIANTS, AgentService, _openrouter_error_detail
 from gaintt.domain import Task
 from gaintt.service import PlanService, StalePlanError
+
+
+def test_structured_output_discriminators_declare_their_json_type():
+    for variant in MUTATION_VARIANTS:
+        discriminator = variant["properties"]["type"]
+        assert discriminator["type"] == "string"
+        assert discriminator["const"]
+
+
+def test_openrouter_error_detail_prefers_the_upstream_provider_message():
+    response = httpx.Response(
+        400,
+        json={
+            "error": {
+                "message": "Provider returned error",
+                "metadata": {
+                    "raw": json.dumps({"error": {"message": "Invalid schema for response_format"}}),
+                },
+            }
+        },
+    )
+
+    assert _openrouter_error_detail(response) == "Invalid schema for response_format"
 
 
 @pytest.mark.asyncio
