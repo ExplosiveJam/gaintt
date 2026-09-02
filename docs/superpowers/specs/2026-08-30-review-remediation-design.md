@@ -13,7 +13,7 @@ Playwright-браузеров и превращение LLM в tool-calling agen
 
 ## Ownership Boundary
 
-Cookie `kanbain_owner` остаётся анонимной идентичностью MVP. Только
+Cookie `gaintt_owner` остаётся анонимной идентичностью MVP. Только
 `GET /api/plan` и `POST /api/import` имеют право создать owner cookie и Plan.
 Остальные пользовательские endpoints не создают владельца или seed Plan.
 

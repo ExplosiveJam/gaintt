@@ -3,9 +3,9 @@ from datetime import date, timedelta
 
 import pytest
 
-from kanbain.agent import AgentService
-from kanbain.domain import Task
-from kanbain.service import PlanService, StalePlanError
+from gaintt.agent import AgentService
+from gaintt.domain import Task
+from gaintt.service import PlanService, StalePlanError
 
 
 @pytest.mark.asyncio

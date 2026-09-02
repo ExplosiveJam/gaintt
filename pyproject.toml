@@ -1,5 +1,5 @@
 [project]
-name = "kanbain"
+name = "gaintt"
 version = "0.1.0"
 description = "A plan editor with a controlled Gantt and an MCP agent"
 requires-python = ">=3.11"

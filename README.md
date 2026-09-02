@@ -1,6 +1,6 @@
-# Kanbain
+# Gaintt
 
-Kanbain — редактор одного Plan: мышью на диаграмме Гантта или естественным языком
+Gaintt — редактор одного Plan: мышью на диаграмме Гантта или естественным языком
 через Agent. Schedule вычисляется на сервере из Durations, Predecessors и Pinned
 Starts; в Excel он выгружается отдельным листом.
 
@@ -15,10 +15,10 @@ cd frontend
 pnpm install
 pnpm build
 cd ..
-uv run uvicorn kanbain.main:app --reload
+uv run uvicorn gaintt.main:app --reload
 ```
 
-Откройте <http://127.0.0.1:8000>. SQLite создаётся в `data/kanbain.sqlite` и
+Откройте <http://127.0.0.1:8000>. SQLite создаётся в `data/gaintt.sqlite` и
 работает в WAL-режиме. Для живого OpenRouter задайте `OPENROUTER_API_KEY` в
 окружении; ключ не хранится в репозитории. Без ключа включается детерминированный
 demo interpreter, поэтому smoke-тест не ходит в сеть.
@@ -31,7 +31,7 @@ make test
 
 Для Playwright один раз установите браузер: `pnpm exec playwright install chromium`.
 
-Пример входного файла — [examples/kanbain-example.xlsx](examples/kanbain-example.xlsx).
+Пример входного файла — [examples/gaintt-example.xlsx](examples/gaintt-example.xlsx).
 
 ## Совместное редактирование
 
@@ -77,7 +77,7 @@ FastAPI ── AgentService ── model: JSON {mutations, reply}
    └── static frontend
 ```
 
-Домен (`kanbain/domain.py`) не знает о FastAPI и базе. Единственный writer —
+Домен (`gaintt/domain.py`) не знает о FastAPI и базе. Единственный writer —
 `PlanService.apply_turn(plan_id, base_version, mutations[])`: он клонирует Plan,
 валидирует весь список, считает Schedule, пишет снапшот Turn и увеличивает версию
 одним SQLite-транзакционным обновлением. Ошибка цикла, неизвестного Task или
@@ -96,7 +96,7 @@ FastAPI ── AgentService ── model: JSON {mutations, reply}
 
 ```bash
 MCP_HTTP_ENABLED=true MCP_WRITE_TOKEN=local-token \
-  uv run uvicorn kanbain.main:app --host 127.0.0.1 --port 8000
+  uv run uvicorn gaintt.main:app --host 127.0.0.1 --port 8000
 ```
 
 Без `Authorization: Bearer local-token` внешний клиент видит только read-only
@@ -137,7 +137,7 @@ AI здесь использовался как инженерный партн�
 
 [Скачать demo.mp4](docs/demo.mp4)
 
-![Kanbain: Excel → чат → экспорт](docs/demo.gif)
+![Gaintt: Excel → чат → экспорт](docs/demo.gif)
 
 ## Roadmap to production
 
@@ -155,8 +155,8 @@ docker compose up --build
 ```
 
 Контейнер собирает frontend, запускает один uvicorn process, монтирует `/data` и
-проверяет `/health`. [render.yaml](render.yaml) содержит тот же deployment shape:
-persistent disk, `KANBAIN_DB_PATH=/data/kanbain.sqlite`, secret OpenRouter через
-environment и MCP выключен. Публичный URL появляется после создания Render
-service и задания `OPENROUTER_API_KEY`; его нельзя достоверно указать до этого
-внешнего действия.
+проверяет `/health`. [render.yaml](render.yaml) использует бесплатный Render
+instance без persistent disk: `GAINTT_DB_PATH=/tmp/gaintt.sqlite`, поэтому данные
+могут сбрасываться при рестарте или пересоздании сервиса. OpenRouter передаётся
+через environment, MCP выключен. Публичный URL появляется после создания Render
+service; его нельзя достоверно указать до этого внешнего действия.

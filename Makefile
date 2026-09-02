@@ -1,6 +1,6 @@
 .PHONY: install dev test build e2e
 
-UV_CACHE_DIR ?= /tmp/kanbain-uv-cache
+UV_CACHE_DIR ?= /tmp/gaintt-uv-cache
 
 install:
 	UV_CACHE_DIR=$(UV_CACHE_DIR) uv sync --dev
@@ -8,7 +8,7 @@ install:
 
 dev:
 	cd frontend && pnpm build
-	UV_CACHE_DIR=$(UV_CACHE_DIR) uv run uvicorn kanbain.main:app --reload
+	UV_CACHE_DIR=$(UV_CACHE_DIR) uv run uvicorn gaintt.main:app --reload
 
 test:
 	UV_CACHE_DIR=$(UV_CACHE_DIR) uv run pytest -q

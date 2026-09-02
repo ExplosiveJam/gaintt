@@ -1,14 +1,14 @@
 services:
-  kanbain:
+  gaintt:
     build: .
     ports:
       - "8000:8000"
     environment:
-      KANBAIN_DB_PATH: /data/kanbain.sqlite
+      GAINTT_DB_PATH: /data/gaintt.sqlite
       MCP_HTTP_ENABLED: "false"
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
     volumes:
-      - kanbain-data:/data
+      - gaintt-data:/data
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
       interval: 30s
@@ -16,4 +16,4 @@ services:
       retries: 3
 
 volumes:
-  kanbain-data:
+  gaintt-data:

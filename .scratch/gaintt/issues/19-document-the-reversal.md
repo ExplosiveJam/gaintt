@@ -41,7 +41,7 @@
       Honker как ещё одну причину, а не только SQLite-лок)
 - [x] Тикет 13 (деплой) перечитан: требование одного инстанса усилилось, а не
       исчезло (примечание добавлено в конец
-      `.scratch/kanbain/issues/13-deploy.md`; `render.yaml`/`docker-compose.yml`
+      `.scratch/gaintt/issues/13-deploy.md`; `render.yaml`/`docker-compose.yml`
       не менялись — уже поднимают ровно один процесс)
 
 ## Найдены и исправлены остаточные противоречия (P2-2, P3-1), 2026-09-01
@@ -61,7 +61,7 @@
 ссылками план расшаривается сознательно (`docs/DESIGN.md`, разделы «Рамки» и
 «Инфраструктура и процесс»).
 
-Отдельно: `kanbain/notifications.py:4` ссылался на несуществующий файл
+Отдельно: `gaintt/notifications.py:4` ссылался на несуществующий файл
 `docs/adr/0003-collaborative-editing-with-honker.md` — реальное имя
 `docs/adr/0003-honker-collaborative-editing.md`. Ссылка исправлена.
 

@@ -3,8 +3,8 @@ from io import BytesIO
 
 from openpyxl import Workbook
 
-from kanbain.domain import Plan, Task
-from kanbain.excel import export_plan, import_plan
+from gaintt.domain import Plan, Task
+from gaintt.excel import export_plan, import_plan
 
 
 def workbook_bytes(headers, rows):

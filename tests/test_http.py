@@ -5,10 +5,10 @@ from io import BytesIO
 from fastapi.testclient import TestClient
 from openpyxl import Workbook
 
-from kanbain.agent import AgentService
-from kanbain.excel import import_plan
-from kanbain.main import create_app
-from kanbain.service import PlanService
+from gaintt.agent import AgentService
+from gaintt.excel import import_plan
+from gaintt.main import create_app
+from gaintt.service import PlanService
 
 
 def sample_excel() -> bytes:
@@ -139,7 +139,7 @@ def test_direct_import_without_a_cookie_still_creates_a_plan_and_member_cookie(t
 
     assert imported.status_code == 200
     assert imported.json()["plan"]["tasks"][0]["name"] == "Импорт"
-    assert "kanbain_member" in imported.cookies
+    assert "gaintt_member" in imported.cookies
 
 
 def test_mcp_http_is_disabled_by_default_and_exposes_write_only_with_token(tmp_path, monkeypatch):
@@ -258,7 +258,7 @@ def test_reading_the_plan_url_without_a_cookie_issues_one_so_the_visitor_can_wri
     invitee = TestClient(app)
     opened = invitee.get(f"/api/plan/{plan['id']}")
 
-    assert "kanbain_member" in opened.cookies
+    assert "gaintt_member" in opened.cookies
     turn = invitee.post(
         "/api/turn",
         json={"plan_id": plan["id"], "base_version": plan["version"], "mutations": []},
@@ -333,8 +333,8 @@ def test_export_and_turns_use_the_plan_id_of_the_calling_tab_not_the_most_recent
 
     plan_a = tab_a.get("/api/plan").json()["plan"]
     plan_b = tab_b.get("/api/plan").json()["plan"]
-    cookie = tab_a.cookies.get("kanbain_member")
-    tab_b.cookies.set("kanbain_member", cookie)  # same person, second tab: same cookie
+    cookie = tab_a.cookies.get("gaintt_member")
+    tab_b.cookies.set("gaintt_member", cookie)  # same person, second tab: same cookie
 
     # tab_b "re-opens" (or SSE-refetches) Plan B, which is exactly what used to
     # move get_member_plan's "most recently joined" pointer onto Plan B.
@@ -378,7 +378,7 @@ def test_chat_model_failure_ends_with_an_error_event(tmp_path):
 
 
 def test_owner_cookie_can_be_marked_secure_for_https_deployments(tmp_path, monkeypatch):
-    monkeypatch.setenv("KANBAIN_COOKIE_SECURE", "true")
+    monkeypatch.setenv("GAINTT_COOKIE_SECURE", "true")
 
     response = TestClient(create_app(tmp_path / "secure-cookie.sqlite")).get("/api/plan")
 

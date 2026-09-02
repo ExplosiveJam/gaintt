@@ -2,7 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 import path from "node:path";
 
 async function demoPause(page: Page) {
-  if (process.env.KANBAIN_RECORD_DEMO === "1") await page.waitForTimeout(700);
+  if (process.env.GAINTT_RECORD_DEMO === "1") await page.waitForTimeout(700);
 }
 
 test("Excel → chat → export keeps the edited plan visible", async ({ page }) => {
@@ -10,7 +10,7 @@ test("Excel → chat → export keeps the edited plan visible", async ({ page })
   await expect(page.getByRole("heading", { name: "Диаграмма Гантта" })).toBeVisible();
   await demoPause(page);
 
-  await page.locator('input[type="file"]').setInputFiles(path.join(process.cwd(), "../examples/kanbain-example.xlsx"));
+  await page.locator('input[type="file"]').setInputFiles(path.join(process.cwd(), "../examples/gaintt-example.xlsx"));
   await expect(page.locator(".alert").getByText("Загружено 3 задач из 3")).toBeVisible();
   await expect(page.getByText("Исследование").first()).toBeVisible();
   await demoPause(page);
@@ -27,13 +27,13 @@ test("Excel → chat → export keeps the edited plan visible", async ({ page })
 
   const download = page.waitForEvent("download");
   await page.getByRole("link", { name: "Выгрузить Excel" }).click();
-  expect((await download).suggestedFilename()).toBe("kanbain-plan.xlsx");
+  expect((await download).suggestedFilename()).toBe("gaintt-plan.xlsx");
   await demoPause(page);
 });
 
 test("dragging a visible Gantt bar persists the library day diff through apply_turn", async ({ page }) => {
   await page.goto("/");
-  await page.locator('input[type="file"]').setInputFiles(path.join(process.cwd(), "../examples/kanbain-example.xlsx"));
+  await page.locator('input[type="file"]').setInputFiles(path.join(process.cwd(), "../examples/gaintt-example.xlsx"));
   await expect(page.locator(".alert").getByText("Загружено 3 задач из 3")).toBeVisible();
 
   const researchBar = page.locator(".gantt-wrap .wx-bar").filter({ hasText: "Исследование" });

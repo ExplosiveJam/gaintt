@@ -340,7 +340,7 @@ export default function App() {
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = "kanbain-plan.xlsx";
+      link.download = "gaintt-plan.xlsx";
       link.click();
       URL.revokeObjectURL(url);
     } catch (reason) {
@@ -386,7 +386,7 @@ export default function App() {
   return (
     <div className="app-shell">
       <header className="topbar">
-        <div className="brand"><span className="brand-mark">K</span><div><strong>Kanbain</strong><span>план, который держит форму</span></div></div>
+        <div className="brand"><span className="brand-mark">K</span><div><strong>Gaintt</strong><span>план, который держит форму</span></div></div>
         <div className="toolbar">
           <button className="button secondary" onClick={() => void shareLink()} disabled={!plan}>Поделиться ссылкой</button>
           {shareFeedback && <span className="share-feedback">{shareFeedback}</span>}

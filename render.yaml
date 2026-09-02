@@ -1,19 +1,15 @@
 services:
   - type: web
-    name: kanbain
+    name: gaintt
     runtime: docker
-    plan: starter
+    plan: free
     healthCheckPath: /health
     envVars:
-      - key: KANBAIN_DB_PATH
-        value: /data/kanbain.sqlite
+      - key: GAINTT_DB_PATH
+        value: /tmp/gaintt.sqlite
       - key: MCP_HTTP_ENABLED
         value: "false"
-      - key: KANBAIN_COOKIE_SECURE
+      - key: GAINTT_COOKIE_SECURE
         value: "true"
       - key: OPENROUTER_API_KEY
         sync: false
-    disk:
-      name: kanbain-data
-      mountPath: /data
-      sizeGB: 1

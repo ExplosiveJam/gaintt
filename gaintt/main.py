@@ -1,4 +1,4 @@
-"""FastAPI HTTP boundary for Kanbain."""
+"""FastAPI HTTP boundary for Gaintt."""
 
 from __future__ import annotations
 
@@ -27,7 +27,7 @@ SSE_RECONCILE_SECONDS = 5.0
 # Capability-URL access model (see README "Совместное редактирование"): a plan_id
 # is a uuid4 and knowing it is sufficient to become a member. This cookie is only
 # a pointer to "who is asking", never an ownership claim -- see is_plan_member.
-MEMBER_COOKIE = "kanbain_member"
+MEMBER_COOKIE = "gaintt_member"
 
 
 class MCPDispatcher:
@@ -55,7 +55,7 @@ def create_app(
     agent: Optional[AgentService] = None,
     mcp_enabled: Optional[bool] = None,
 ) -> FastAPI:
-    database = Path(db_path or os.getenv("KANBAIN_DB_PATH", "data/kanbain.sqlite"))
+    database = Path(db_path or os.getenv("GAINTT_DB_PATH", "data/gaintt.sqlite"))
     service = PlanService(database)
     service.initialize()
     mcp_servers = []
@@ -67,10 +67,10 @@ def create_app(
                 await stack.enter_async_context(server.session_manager.run())
             yield
 
-    app = FastAPI(title="Kanbain", version="0.1.0", lifespan=lifespan)
+    app = FastAPI(title="Gaintt", version="0.1.0", lifespan=lifespan)
     app.state.service = service
     app.state.agent = agent or AgentService(service)
-    cookie_secure = os.getenv("KANBAIN_COOKIE_SECURE", "false").lower() == "true"
+    cookie_secure = os.getenv("GAINTT_COOKIE_SECURE", "false").lower() == "true"
 
     enabled = mcp_enabled if mcp_enabled is not None else os.getenv("MCP_HTTP_ENABLED", "false").lower() == "true"
     if enabled:
@@ -255,7 +255,7 @@ def create_app(
         return StreamingResponse(
             BytesIO(export_plan(plan)),
             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            headers={"Content-Disposition": 'attachment; filename="kanbain-plan.xlsx"'},
+            headers={"Content-Disposition": 'attachment; filename="gaintt-plan.xlsx"'},
         )
 
     @app.post("/api/revert/{turn_id}")
@@ -346,7 +346,7 @@ def create_app(
         index_file = dist / "index.html"
         if index_file.exists():
             return FileResponse(index_file)
-        return HTMLResponse("<h1>Kanbain</h1><p>Frontend is not built. Run <code>pnpm install && pnpm build</code>.</p>")
+        return HTMLResponse("<h1>Gaintt</h1><p>Frontend is not built. Run <code>pnpm install && pnpm build</code>.</p>")
 
     return app
 
@@ -357,4 +357,4 @@ app = create_app()
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("kanbain.main:app", host="0.0.0.0", port=int(os.getenv("PORT", "8000")))
+    uvicorn.run("gaintt.main:app", host="0.0.0.0", port=int(os.getenv("PORT", "8000")))

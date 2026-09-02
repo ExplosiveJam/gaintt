@@ -13,7 +13,7 @@ def main() -> None:
     sheet.append(["Исследование", "Собрать вводные", "Иванов", 2, "", "2026-09-01", "2026-09-04"])
     sheet.append(["Дизайн", "Подготовить макет", "Петров", 3, "Исследование", "", "2026-09-09"])
     sheet.append(["Демо", "Показать результат", "Сидорова", 1, "Дизайн", "", "2026-09-15"])
-    output = Path(__file__).resolve().parents[1] / "examples" / "kanbain-example.xlsx"
+    output = Path(__file__).resolve().parents[1] / "examples" / "gaintt-example.xlsx"
     output.parent.mkdir(parents=True, exist_ok=True)
     workbook.save(output)
 

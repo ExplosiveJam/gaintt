@@ -1,8 +1,8 @@
 import pytest
 
-from kanbain.domain import Task
-from kanbain.mcp_tools import InMemoryMCPClient, MCPToolRegistry
-from kanbain.service import PlanService
+from gaintt.domain import Task
+from gaintt.mcp_tools import InMemoryMCPClient, MCPToolRegistry
+from gaintt.service import PlanService
 
 
 @pytest.mark.asyncio

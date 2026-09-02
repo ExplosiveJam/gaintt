@@ -2,7 +2,7 @@ from datetime import date
 
 import pytest
 
-from kanbain.domain import DomainValidationError, Plan, Task, apply_mutations
+from gaintt.domain import DomainValidationError, Plan, Task, apply_mutations
 
 
 def make_plan() -> Plan:

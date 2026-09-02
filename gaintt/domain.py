@@ -325,4 +325,4 @@ def seed_plan(plan_id: str) -> Plan:
         )
         for task_id, name, assignee, duration, predecessors in names
     }
-    return Plan(plan_id, "Демо-план Kanbain", date(2026, 9, 1), tasks)
+    return Plan(plan_id, "Демо-план Gaintt", date(2026, 9, 1), tasks)

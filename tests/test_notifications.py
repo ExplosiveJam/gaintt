@@ -6,9 +6,9 @@ from pathlib import Path
 
 import pytest
 
-from kanbain.domain import Task
-from kanbain.notifications import PlanNotifier
-from kanbain.service import PlanService
+from gaintt.domain import Task
+from gaintt.notifications import PlanNotifier
+from gaintt.service import PlanService
 
 CROSS_PROCESS_WRITER = Path(__file__).with_name("_cross_process_writer.py")
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -82,7 +82,7 @@ def test_listen_subscribes_synchronously_not_on_first_iteration(tmp_path):
     snapshot MAX(id)/subscribe to update events) synchronously, before returning --
     not defer that to the first `__anext__` call.
 
-    kanbain/main.py's plan_events() relies on this: it calls
+    gaintt/main.py's plan_events() relies on this: it calls
     `service.notifier.listen(...)` before reading the Plan's current version for
     its first SSE frame, specifically so a write landing in between is still
     captured. If `listen()` were a lazy `async def ... yield` wrapper (as it used
@@ -142,7 +142,7 @@ def test_failed_write_does_not_publish(tmp_path):
     monkeypatch_publish = service.notifier.publish
     service.notifier.publish = lambda plan_id, version: published.append((plan_id, version))
 
-    from kanbain.service import StalePlanError
+    from gaintt.service import StalePlanError
 
     with pytest.raises(StalePlanError):
         service.apply_turn(plan.id, plan.version - 1 if plan.version > 0 else 999, [])

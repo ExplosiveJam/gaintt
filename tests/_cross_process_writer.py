@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import sys
 
-from kanbain.service import PlanService
+from gaintt.service import PlanService
 
 
 def main() -> None:

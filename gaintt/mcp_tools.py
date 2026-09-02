@@ -99,7 +99,7 @@ class InMemoryMCPClient:
 def build_fastmcp(service: PlanService, include_write: bool = True) -> FastMCP:
     registry = MCPToolRegistry(service, include_write=include_write)
     server = FastMCP(
-        "Kanbain",
+        "Gaintt",
         instructions="Редактируйте ровно один Plan через apply_turn.",
         streamable_http_path="/",
         json_response=True,

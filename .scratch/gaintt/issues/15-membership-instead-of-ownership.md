@@ -20,11 +20,11 @@ cookie в участники Plan.
 **Status:** done
 
 - [x] Участники Plan хранятся явно, а не выводятся из единственного `owner_id`
-      (таблица `plan_members(plan_id, member_id, joined_at)` в `kanbain/service.py`)
+      (таблица `plan_members(plan_id, member_id, joined_at)` в `gaintt/service.py`)
 - [x] Открытие `/plan/{id}` добавляет текущего анонимного пользователя в участники
-      (`GET /api/plan/{plan_id}` в `kanbain/main.py` вызывает `service.add_member`)
+      (`GET /api/plan/{plan_id}` в `gaintt/main.py` вызывает `service.add_member`)
 - [x] Запись и откат разрешены участнику, а не только создателю
-      (`is_plan_member`/`is_turn_member` в `kanbain/main.py` заменили `owns_plan`/`owns_turn`)
+      (`is_plan_member`/`is_turn_member` в `gaintt/main.py` заменили `owns_plan`/`owns_turn`)
 - [x] Запрос к несуществующему Plan по-прежнему отдаёт 404 и не подтверждает существование id
       (`test_opening_a_nonexistent_plan_id_returns_404_without_confirming_or_denying_existence`)
 - [x] Пользователь без cookie не может писать: cookie выдаётся при первом чтении

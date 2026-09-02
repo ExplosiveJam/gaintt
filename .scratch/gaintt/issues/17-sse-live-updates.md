@@ -20,7 +20,7 @@
 **Status:** done
 
 - [x] `GET` SSE-эндпоинт отдаёт события только участникам этого Plan
-      (`GET /api/plan/{plan_id}/events` в `kanbain/main.py` проверяет
+      (`GET /api/plan/{plan_id}/events` в `gaintt/main.py` проверяет
       `is_plan_member` и отдаёт 404 иначе; `tests/test_sse.py::test_sse_requires_membership`)
 - [x] Первый кадр после подключения несёт текущую версию Plan
       (`events()` в `plan_events` читает `service.get_plan(plan_id)` и шлёт кадр
@@ -75,7 +75,7 @@ done, но реализация не давала заявленной гара�
 
 Исправлено: `PlanNotifier.listen` теперь синхронный метод, возвращающий уже
 сконструированный (и уже подписанный) `honker.Listener` немедленно —
-`kanbain/notifications.py`. `plan_events` в `kanbain/main.py` не изменил
+`gaintt/notifications.py`. `plan_events` в `gaintt/main.py` не изменил
 порядок вызовов (он и был правильным), но теперь эта гарантия реальна.
 
 Регрессия закрыта двумя тестами:

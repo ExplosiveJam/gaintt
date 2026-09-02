@@ -2,8 +2,8 @@ import sqlite3
 
 import pytest
 
-from kanbain.domain import Task
-from kanbain.service import PlanNotFoundError, PlanService, StalePlanError
+from gaintt.domain import Task
+from gaintt.service import PlanNotFoundError, PlanService, StalePlanError
 
 
 def test_apply_turn_is_versioned_atomic_and_revert_is_guarded(tmp_path):
@@ -75,7 +75,7 @@ def test_service_closes_connections_after_success_and_error(tmp_path, monkeypatc
         opened.append(connection)
         return connection
 
-    monkeypatch.setattr("kanbain.service.sqlite3.connect", tracking_connect)
+    monkeypatch.setattr("gaintt.service.sqlite3.connect", tracking_connect)
     service = PlanService(tmp_path / "connections.sqlite")
 
     service.initialize()
@@ -161,7 +161,7 @@ def test_service_closes_connection_when_pragma_setup_fails(tmp_path, monkeypatch
         opened.append(connection)
         return connection
 
-    monkeypatch.setattr("kanbain.service.sqlite3.connect", tracking_connect)
+    monkeypatch.setattr("gaintt.service.sqlite3.connect", tracking_connect)
 
     with pytest.raises(sqlite3.OperationalError, match="pragma failed"):
         PlanService(tmp_path / "setup-error.sqlite").initialize()

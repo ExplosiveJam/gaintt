@@ -1,12 +1,13 @@
 import asyncio
 import json
 import threading
+import time
 
 import httpx
 import uvicorn
 from fastapi.testclient import TestClient
 
-from kanbain.main import create_app
+from gaintt.main import create_app
 
 
 def read_sse_payload(line: str) -> dict:
@@ -32,8 +33,13 @@ class _LiveServer:
 
     def __enter__(self):
         self.thread.start()
-        while not self.server.started:
-            pass
+        deadline = time.monotonic() + 5
+        while not self.server.started and self.thread.is_alive():
+            if time.monotonic() >= deadline:
+                raise RuntimeError("uvicorn did not start within 5 seconds")
+            time.sleep(0.01)
+        if not self.server.started:
+            raise RuntimeError("uvicorn stopped before accepting connections")
         port = self.server.servers[0].sockets[0].getsockname()[1]
         self.base_url = f"http://127.0.0.1:{port}"
         return self
@@ -59,7 +65,7 @@ async def test_sse_first_frame_carries_the_current_plan_version(tmp_path):
     app = create_app(tmp_path / "sse-first-frame.sqlite")
     client = TestClient(app)
     plan = client.get("/api/plan").json()["plan"]
-    member_cookie = client.cookies.get("kanbain_member")
+    member_cookie = client.cookies.get("gaintt_member")
 
     # Someone else's write happens before this client ever subscribes.
     client.post(
@@ -72,7 +78,7 @@ async def test_sse_first_frame_carries_the_current_plan_version(tmp_path):
     )
 
     with _LiveServer(app) as live:
-        async with httpx.AsyncClient(base_url=live.base_url, cookies={"kanbain_member": member_cookie}) as async_client:
+        async with httpx.AsyncClient(base_url=live.base_url, cookies={"gaintt_member": member_cookie}) as async_client:
             async with async_client.stream("GET", f"/api/plan/{plan['id']}/events") as response:
                 assert response.status_code == 200
                 assert response.headers["content-type"].startswith("text/event-stream")
@@ -89,10 +95,10 @@ async def test_sse_delivers_an_event_when_another_client_writes_and_versions_con
     writer = TestClient(app)
     plan = subscriber.get("/api/plan").json()["plan"]
     writer.get(f"/api/plan/{plan['id']}")  # writer becomes a member via the capability URL
-    subscriber_cookie = subscriber.cookies.get("kanbain_member")
+    subscriber_cookie = subscriber.cookies.get("gaintt_member")
 
     with _LiveServer(app) as live:
-        async with httpx.AsyncClient(base_url=live.base_url, cookies={"kanbain_member": subscriber_cookie}) as client:
+        async with httpx.AsyncClient(base_url=live.base_url, cookies={"gaintt_member": subscriber_cookie}) as client:
             async with client.stream("GET", f"/api/plan/{plan['id']}/events") as response:
                 assert response.status_code == 200
                 lines = response.aiter_lines()
@@ -136,7 +142,7 @@ async def test_sse_write_between_subscribe_and_first_frame_is_delivered(tmp_path
     subscriber = TestClient(app)
 
     plan = subscriber.get("/api/plan").json()["plan"]
-    subscriber_cookie = subscriber.cookies.get("kanbain_member")
+    subscriber_cookie = subscriber.cookies.get("gaintt_member")
 
     service = app.state.service
     original_get_plan = service.get_plan
@@ -156,7 +162,7 @@ async def test_sse_write_between_subscribe_and_first_frame_is_delivered(tmp_path
     monkeypatch.setattr(service, "get_plan", get_plan_and_race)
 
     with _LiveServer(app) as live:
-        async with httpx.AsyncClient(base_url=live.base_url, cookies={"kanbain_member": subscriber_cookie}) as client:
+        async with httpx.AsyncClient(base_url=live.base_url, cookies={"gaintt_member": subscriber_cookie}) as client:
             async with client.stream("GET", f"/api/plan/{plan['id']}/events") as response:
                 assert response.status_code == 200
                 lines = response.aiter_lines()
@@ -181,10 +187,10 @@ async def test_sse_reconnecting_after_a_drop_still_converges(tmp_path):
     app = create_app(database)
     subscriber = TestClient(app)
     plan = subscriber.get("/api/plan").json()["plan"]
-    subscriber_cookie = subscriber.cookies.get("kanbain_member")
+    subscriber_cookie = subscriber.cookies.get("gaintt_member")
 
     with _LiveServer(app) as live:
-        async with httpx.AsyncClient(base_url=live.base_url, cookies={"kanbain_member": subscriber_cookie}) as client:
+        async with httpx.AsyncClient(base_url=live.base_url, cookies={"gaintt_member": subscriber_cookie}) as client:
             async with client.stream("GET", f"/api/plan/{plan['id']}/events") as response:
                 await response.aiter_lines().__anext__()
             # response context manager exited -> connection dropped without an explicit close call
@@ -198,7 +204,7 @@ async def test_sse_reconnecting_after_a_drop_still_converges(tmp_path):
             },
         )
 
-        async with httpx.AsyncClient(base_url=live.base_url, cookies={"kanbain_member": subscriber_cookie}) as client:
+        async with httpx.AsyncClient(base_url=live.base_url, cookies={"gaintt_member": subscriber_cookie}) as client:
             async with client.stream("GET", f"/api/plan/{plan['id']}/events") as response:
                 line = await response.aiter_lines().__anext__()
                 while not line:
