@@ -4,6 +4,9 @@ Gaintt — редактор одного Plan: мышью на диаграмм�
 через Agent. Schedule вычисляется на сервере из Durations, Predecessors и Pinned
 Starts; в Excel он выгружается отдельным листом.
 
+- Приложение: [gaintt.onrender.com](https://gaintt.onrender.com/)
+- Исходный код: [github.com/ExplosiveJam/gaintt](https://github.com/ExplosiveJam/gaintt)
+
 ## Быстрый запуск
 
 Требования: Python 3.11+ (нужен `honker`), [uv](https://docs.astral.sh/uv/),
@@ -104,7 +107,8 @@ MCP_HTTP_ENABLED=true MCP_WRITE_TOKEN=local-token \
 затем включайте endpoint за auth/reverse proxy.
 
 Граница здесь намеренно узкая: модель сама не вызывает MCP tools. Она получает
-свежий snapshot Plan и возвращает JSON `{mutations, reply}`, после чего
+свежий snapshot Plan и возвращает строго типизированный JSON `{mutations, reply}`
+по JSON Schema, после чего
 `AgentService` вызывает `apply_turn` через настоящий in-memory MCP transport.
 `find_tasks` доступен MCP-клиентам, но текущий LLM path не использует его как
 tool-calling loop. Поэтому MCP участвует в каждом Agent Turn, но управляет им
@@ -142,11 +146,12 @@ AI здесь использовался как инженерный партн�
 ## Roadmap to production
 
 Полная последовательность технического долга находится в
-[docs/ROADMAP.md](docs/ROADMAP.md). Первым пунктом сознательно стоит ограничение
-одного процесса и одного SQLite-файла — совместное редактирование внутри него уже
-есть ([ADR-0003](docs/adr/0003-honker-collaborative-editing.md)), но
-горизонтальное масштабирование по-прежнему невозможно: и запись, и доставка
-Honker-сигналов привязаны к одной машине.
+[docs/ROADMAP.md](docs/ROADMAP.md). Первым пунктом стоит долговечность данных:
+бесплатный demo хранит SQLite в эфемерном `/tmp`. Следом идёт ограничение одного
+процесса — совместное редактирование внутри него уже есть
+([ADR-0003](docs/adr/0003-honker-collaborative-editing.md)), но горизонтальное
+масштабирование по-прежнему невозможно: и запись, и доставка Honker-сигналов
+привязаны к одной машине.
 
 ## Container / deploy
 
@@ -158,5 +163,6 @@ docker compose up --build
 проверяет `/health`. [render.yaml](render.yaml) использует бесплатный Render
 instance без persistent disk: `GAINTT_DB_PATH=/tmp/gaintt.sqlite`, поэтому данные
 могут сбрасываться при рестарте или пересоздании сервиса. OpenRouter передаётся
-через environment, MCP выключен. Публичный URL появляется после создания Render
-service; его нельзя достоверно указать до этого внешнего действия.
+через environment, MCP выключен. Текущий бесплатный demo-сервис доступен по
+[https://gaintt.onrender.com/](https://gaintt.onrender.com/). Для production
+нужен persistent disk или внешняя БД: `/tmp` на бесплатном сервисе эфемерен.

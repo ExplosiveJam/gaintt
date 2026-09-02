@@ -92,3 +92,42 @@ def test_import_breaks_cycle_at_closing_link_and_reports_it():
     assert any("Цикл разорван" in item for item in report.warnings)
     plan.schedule()
     assert sum(len(task.predecessors) for task in plan.tasks.values()) == 2
+
+
+def test_import_replaces_duplicate_ids_without_overwriting_a_task():
+    data = workbook_bytes(
+        ["задача", "длительность", "ID"],
+        [["A", 1, "task-002"], ["B", 1, "task-002"], ["C", 1, "task-003"]],
+    )
+
+    plan, report = import_plan(data)
+
+    assert report.loaded_count == 3
+    assert len(plan.tasks) == 3
+    assert {task.name for task in plan.tasks.values()} == {"A", "B", "C"}
+    assert any("Дублирующийся ID" in item for item in report.warnings)
+
+
+def test_import_uses_first_plan_start_and_reports_an_invalid_value_leniently():
+    data = workbook_bytes(
+        ["задача", "длительность", "Plan Start"],
+        [["A", 1, "not-a-date"], ["B", 1, "2026-10-20"]],
+    )
+
+    plan, report = import_plan(data, default_plan_start="2026-09-01")
+
+    assert report.loaded_count == 2
+    assert plan.plan_start == date(2026, 9, 1)
+    assert any("начала плана" in item for item in report.errors)
+
+
+def test_import_does_not_mix_plan_metadata_from_different_rows():
+    data = workbook_bytes(
+        ["задача", "длительность", "Plan Start", "Plan Name"],
+        [["A", 1, "", "Первый план"], ["B", 1, "2026-10-20", "Другой план"]],
+    )
+
+    plan, _ = import_plan(data, default_plan_start="2026-09-01")
+
+    assert plan.name == "Первый план"
+    assert plan.plan_start == date(2026, 9, 1)

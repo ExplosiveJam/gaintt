@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Iterable, Iterator, List, Optional
 
-from .domain import Plan, Task, apply_mutations, seed_plan
+from .domain import DomainValidationError, Plan, Task, apply_mutations, seed_plan
 from .notifications import PlanNotifier
 
 logger = logging.getLogger(__name__)
@@ -243,6 +243,8 @@ class PlanService:
                 raise StalePlanError(f"Plan version is {current.version}, but the request was based on {base_version}")
             candidate = current.clone()
             changes = apply_mutations(candidate, mutation_list)
+            if not changes:
+                raise DomainValidationError("Turn does not change the Plan", "no_changes")
             candidate.version = current.version + 1
             turn_id = str(uuid.uuid4())
             connection.execute(

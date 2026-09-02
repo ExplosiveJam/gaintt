@@ -34,6 +34,17 @@ def date_value(value: Optional[date]) -> Optional[str]:
     return value.isoformat() if value else None
 
 
+def next_task_id(existing_ids: Iterable[str]) -> str:
+    """Return the first deterministic task-NNN id that is not already used."""
+    used = set(existing_ids)
+    index = 1
+    while True:
+        candidate = f"task-{index:03d}"
+        if candidate not in used:
+            return candidate
+        index += 1
+
+
 @dataclass
 class Task:
     id: str
@@ -211,7 +222,7 @@ def _apply_one(plan: Plan, mutation: Dict[str, Any]) -> None:
     kind = mutation.get("type")
     task_id = mutation.get("task_id")
     if kind == "add_task":
-        new_id = str(mutation.get("id") or f"task-{len(plan.tasks) + 1:03d}")
+        new_id = str(mutation.get("id") or next_task_id(plan.tasks))
         if new_id in plan.tasks:
             raise DomainValidationError(f"Task '{new_id}' already exists", "duplicate_task")
         plan.tasks[new_id] = Task(

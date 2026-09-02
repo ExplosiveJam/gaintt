@@ -2,7 +2,7 @@ import sqlite3
 
 import pytest
 
-from gaintt.domain import Task
+from gaintt.domain import DomainValidationError, Task
 from gaintt.service import PlanNotFoundError, PlanService, StalePlanError
 
 
@@ -28,6 +28,23 @@ def test_apply_turn_is_versioned_atomic_and_revert_is_guarded(tmp_path):
 
     with pytest.raises(StalePlanError):
         service.revert_turn(result.turn_id)
+
+
+@pytest.mark.parametrize(
+    "mutations",
+    [[], [{"type": "reassign", "task_id": "a", "assignee": ""}]],
+    ids=["empty", "semantic-no-op"],
+)
+def test_apply_turn_rejects_empty_or_unchanged_turn_without_incrementing_version(tmp_path, mutations):
+    service = PlanService(tmp_path / "no-op.sqlite")
+    service.initialize()
+    plan = service.create_plan("owner", tasks={"a": Task(id="a", name="A")})
+
+    with pytest.raises(DomainValidationError, match="does not change"):
+        service.apply_turn(plan.id, plan.version, mutations)
+
+    assert service.get_plan(plan.id).version == plan.version
+    assert service.list_turns(plan.id) == []
 
 
 def test_new_owner_gets_independent_seed_plan(tmp_path):

@@ -186,3 +186,43 @@ async def test_agent_reports_one_attempt_when_deterministic_mutation_fails_immed
 
     assert result["attempts"] == 1
     assert result["error"]
+
+
+@pytest.mark.asyncio
+async def test_agent_does_not_create_a_turn_for_an_explicit_clarification_reply(tmp_path):
+    service = PlanService(tmp_path / "clarification.sqlite")
+    service.initialize()
+    plan = service.create_plan("owner", tasks={"a": Task(id="a", name="A")})
+
+    def model(*_):
+        return {"mutations": [], "reply": "Уточните, какую задачу изменить."}
+
+    result = await AgentService(service, model=model).handle(plan.id, "Измени план")
+
+    assert result["reply"] == "Уточните, какую задачу изменить."
+    assert result["changes"] == []
+    assert result["attempts"] == 1
+    assert "turn_id" not in result
+    assert service.get_plan(plan.id).version == plan.version
+    assert service.list_turns(plan.id) == []
+
+
+@pytest.mark.asyncio
+async def test_agent_retries_a_model_response_that_omits_mutations_instead_of_reporting_success(tmp_path):
+    service = PlanService(tmp_path / "invalid-model-response.sqlite")
+    service.initialize()
+    plan = service.create_plan("owner", tasks={"a": Task(id="a", name="A")})
+    calls = 0
+
+    def invalid_model(*_):
+        nonlocal calls
+        calls += 1
+        return {"reply": "Готово."}
+
+    result = await AgentService(service, model=invalid_model).handle(plan.id, "Измени план")
+
+    assert calls == 3
+    assert result["attempts"] == 3
+    assert result["error"]
+    assert service.get_plan(plan.id).version == plan.version
+    assert service.list_turns(plan.id) == []

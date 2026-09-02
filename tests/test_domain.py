@@ -74,3 +74,22 @@ def test_apply_mutations_returns_changes_and_supports_bulk_style_list():
     assert plan.tasks["a"].assignee == "Петров"
     assert plan.schedule()["a"].start == date(2026, 9, 3)
     assert {change["task_id"] for change in changes} == {"a", "b", "c"}
+
+
+def test_add_task_allocates_an_unused_id_after_a_non_final_task_was_removed():
+    plan = Plan(
+        id="plan-ids",
+        name="IDs",
+        plan_start=date(2026, 9, 1),
+        tasks={
+            "task-001": Task(id="task-001", name="A"),
+            "task-002": Task(id="task-002", name="B"),
+            "task-003": Task(id="task-003", name="C"),
+        },
+    )
+    apply_mutations(plan, [{"type": "remove_task", "task_id": "task-002"}])
+
+    apply_mutations(plan, [{"type": "add_task", "name": "D"}])
+
+    assert len(plan.tasks) == 3
+    assert next(task.id for task in plan.tasks.values() if task.name == "D") == "task-002"

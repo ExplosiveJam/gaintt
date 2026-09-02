@@ -22,6 +22,65 @@ PROVIDER_CONFIG = {
     "require_parameters": True,
 }
 
+MUTATION_VARIANTS = [
+    {
+        "type": "object",
+        "properties": {
+            "type": {"const": "add_task"},
+            "name": {"type": "string"},
+            "description": {"type": "string"},
+            "assignee": {"type": "string"},
+            "duration": {"type": "integer", "minimum": 1},
+            "predecessor_ids": {"type": "array", "items": {"type": "string"}},
+            "pinned_start": {"type": ["string", "null"]},
+            "due_date": {"type": ["string", "null"]},
+        },
+        "required": ["type", "name", "description", "assignee", "duration", "predecessor_ids", "pinned_start", "due_date"],
+        "additionalProperties": False,
+    },
+    *[
+        {
+            "type": "object",
+            "properties": {"type": {"const": kind}, "task_id": {"type": "string"}, field: schema},
+            "required": ["type", "task_id", field],
+            "additionalProperties": False,
+        }
+        for kind, field, schema in (
+            ("pin_start", "date", {"type": "string", "format": "date"}),
+            ("reassign", "assignee", {"type": "string"}),
+            ("set_due_date", "due_date", {"type": ["string", "null"]}),
+            ("set_predecessors", "predecessor_ids", {"type": "array", "items": {"type": "string"}}),
+            ("rename", "name", {"type": "string"}),
+        )
+    ],
+    *[
+        {
+            "type": "object",
+            "properties": {"type": {"const": kind}, "task_id": {"type": "string"}},
+            "required": ["type", "task_id"],
+            "additionalProperties": False,
+        }
+        for kind in ("clear_pinned_start", "remove_task")
+    ],
+]
+
+AGENT_RESPONSE_FORMAT = {
+    "type": "json_schema",
+    "json_schema": {
+        "name": "gaintt_plan_edit",
+        "strict": True,
+        "schema": {
+            "type": "object",
+            "properties": {
+                "mutations": {"type": "array", "items": {"anyOf": MUTATION_VARIANTS}},
+                "reply": {"type": "string"},
+            },
+            "required": ["mutations", "reply"],
+            "additionalProperties": False,
+        },
+    },
+}
+
 
 class AgentService:
     def __init__(self, service: PlanService, model: Optional[Callable[..., Any]] = None) -> None:
@@ -47,8 +106,11 @@ class AgentService:
             ],
         }
         return (
-            "You edit exactly one Plan. Address Tasks by id, use only apply_turn, and never invent ids. "
-            "If a name is ambiguous, ask the user to choose. Return JSON with mutations and a short reply.\n"
+            "You edit exactly one Plan. Address Tasks by id and never invent ids. "
+            "Return mutations from the supplied JSON schema and a short Russian reply. "
+            "Use pin_start with an absolute date for shifts, set_predecessors for dependencies, "
+            "reassign for assignees, and add_task for new work. Return an empty mutations list "
+            "only when the request needs clarification or makes no edit.\n"
             + json.dumps(snapshot, ensure_ascii=False, separators=(",", ":"))
         )
 
@@ -74,12 +136,26 @@ class AgentService:
                     "model": MODEL_ID,
                     "messages": messages,
                     "provider": PROVIDER_CONFIG,
-                    "response_format": {"type": "json_object"},
+                    "response_format": AGENT_RESPONSE_FORMAT,
                 },
             )
             response.raise_for_status()
             content = response.json()["choices"][0]["message"]["content"]
         return json.loads(content)
+
+    def _validate_request(self, request: Any) -> Dict[str, Any]:
+        if not isinstance(request, dict):
+            raise DomainValidationError("Model response must be a JSON object", "invalid_model_response")
+        if "mutations" not in request or not isinstance(request["mutations"], list):
+            raise DomainValidationError("Model response must contain a mutations array", "invalid_model_response")
+        reply = request.get("reply")
+        if reply is None:
+            request["reply"] = "Ход применён."
+        elif not isinstance(reply, str) or not reply.strip():
+            raise DomainValidationError("Model response reply must be a non-empty string", "invalid_model_response")
+        if not all(isinstance(mutation, dict) for mutation in request["mutations"]):
+            raise DomainValidationError("Every mutation must be a JSON object", "invalid_model_response")
+        return request
 
     def _resolve(self, plan: Dict[str, Any], query: str) -> Any:
         needle = query.strip(" .«»\"'").casefold()
@@ -209,15 +285,26 @@ class AgentService:
             )
             request = await self._request(plan, retry_message, history)
             await self._emit_stage(stage_callback, stages[1])
-            if request.get("clarification"):
+            if isinstance(request, dict) and request.get("clarification"):
                 reply = "Нашёл несколько задач. Выберите одну:"
                 self.service.record_chat(plan_id, "assistant", reply)
                 return {"plan": self._with_turns(plan), "stages": stages[:2], "changes": [], "reply": reply, **request}
             try:
+                request = self._validate_request(request)
+                if not request["mutations"]:
+                    reply = request["reply"]
+                    self.service.record_chat(plan_id, "assistant", reply)
+                    return {
+                        "plan": self._with_turns(plan),
+                        "stages": stages[:2],
+                        "attempts": attempt,
+                        "changes": [],
+                        "reply": reply,
+                    }
                 await self._emit_stage(stage_callback, stages[2])
                 result = await self.client.call_tool(
                     "apply_turn",
-                    {"plan_id": plan_id, "base_version": plan["version"], "mutations": request.get("mutations", [])},
+                    {"plan_id": plan_id, "base_version": plan["version"], "mutations": request["mutations"]},
                 )
                 reply = request.get("reply", "Ход применён.")
                 self.service.record_chat(plan_id, "assistant", reply)

@@ -261,7 +261,11 @@ def test_reading_the_plan_url_without_a_cookie_issues_one_so_the_visitor_can_wri
     assert "gaintt_member" in opened.cookies
     turn = invitee.post(
         "/api/turn",
-        json={"plan_id": plan["id"], "base_version": plan["version"], "mutations": []},
+        json={
+            "plan_id": plan["id"],
+            "base_version": plan["version"],
+            "mutations": [{"type": "reassign", "task_id": plan["tasks"][0]["id"], "assignee": "INVITEE"}],
+        },
     )
     assert turn.status_code == 200
 

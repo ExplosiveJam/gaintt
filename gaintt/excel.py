@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from openpyxl import Workbook, load_workbook
 
-from .domain import DomainValidationError, Plan, Task, parse_date
+from .domain import DomainValidationError, Plan, Task, next_task_id, parse_date
 
 
 def _header_key(value: Any) -> str:
@@ -154,7 +154,10 @@ def import_plan(data: bytes, default_plan_start: str = "2026-09-01") -> Tuple[Pl
     report.total_rows = len(data_rows)
     tasks: Dict[str, Task] = {}
     raw_predecessors: Dict[str, List[str]] = {}
-    plan_start = default_plan_start
+    plan_start_index = fields.get("plan_start")
+    raw_plan_start: Any = (
+        data_rows[0][plan_start_index] if data_rows and plan_start_index is not None and plan_start_index < len(data_rows[0]) else None
+    )
 
     for row in data_rows:
 
@@ -170,9 +173,9 @@ def import_plan(data: bytes, default_plan_start: str = "2026-09-01") -> Tuple[Pl
         if duration is None:
             report.errors.append(f"Задача «{name}»: длительность пустая или нечисловая")
             continue
-        task_id = str(value("id") or f"task-{len(tasks) + 1:03d}").strip()
+        task_id = str(value("id") or next_task_id(tasks)).strip()
         if task_id in tasks:
-            task_id = f"task-{len(tasks) + 1:03d}"
+            task_id = next_task_id(tasks)
             report.warnings.append(f"Дублирующийся ID для «{name}» заменён на «{task_id}»")
         pinned_start = value("pinned_start")
         due_date = value("due_date")
@@ -196,7 +199,6 @@ def import_plan(data: bytes, default_plan_start: str = "2026-09-01") -> Tuple[Pl
             due_date=parsed_due,
         )
         raw_predecessors[task_id] = _split_predecessors(value("predecessors"))
-        plan_start = value("plan_start") or plan_start
         report.loaded_count += 1
 
     if not tasks:
@@ -208,7 +210,13 @@ def import_plan(data: bytes, default_plan_start: str = "2026-09-01") -> Tuple[Pl
         first_value = data_rows[0][fields["plan_name"]]
         if first_value not in (None, ""):
             plan_name = str(first_value).strip()
-    plan = Plan("imported", plan_name, parse_date(plan_start) or parse_date(default_plan_start), tasks)
+    parsed_plan_start = parse_date(default_plan_start)
+    if raw_plan_start not in (None, ""):
+        try:
+            parsed_plan_start = parse_date(raw_plan_start) or parsed_plan_start
+        except DomainValidationError:
+            report.errors.append("Некорректная дата начала плана; использовано значение по умолчанию")
+    plan = Plan("imported", plan_name, parsed_plan_start, tasks)
     plan.schedule()
     return plan, report
 

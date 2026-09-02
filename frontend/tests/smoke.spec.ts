@@ -8,6 +8,9 @@ async function demoPause(page: Page) {
 test("Excel → chat → export keeps the edited plan visible", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "Диаграмма Гантта" })).toBeVisible();
+  await expect(page.getByText("Название задачи", { exact: true })).toBeVisible();
+  await expect(page.getByText("Дата начала", { exact: true })).toBeVisible();
+  await expect(page.getByText("Длительность", { exact: true }).first()).toBeVisible();
   await demoPause(page);
 
   await page.locator('input[type="file"]').setInputFiles(path.join(process.cwd(), "../examples/gaintt-example.xlsx"));
@@ -26,7 +29,7 @@ test("Excel → chat → export keeps the edited plan visible", async ({ page })
   await demoPause(page);
 
   const download = page.waitForEvent("download");
-  await page.getByRole("link", { name: "Выгрузить Excel" }).click();
+  await page.getByRole("button", { name: "Выгрузить Excel" }).click();
   expect((await download).suggestedFilename()).toBe("gaintt-plan.xlsx");
   await demoPause(page);
 });

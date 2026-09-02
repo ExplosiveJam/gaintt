@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Gantt } from "@svar-ui/react-gantt";
+import { Gantt, type IColumnConfig, type IScaleConfig } from "@svar-ui/react-gantt";
 import "@svar-ui/react-gantt/all.css";
 import {
   dragDiffToDate,
@@ -14,6 +14,7 @@ import {
   type Task,
   type Turn
 } from "./model";
+import { TaskModal } from "./TaskModal";
 
 type ChatMessage = {
   role: "user" | "assistant";
@@ -35,6 +36,18 @@ const initialMessages: ChatMessage[] = [
     role: "assistant",
     content: "Я вижу ваш план. Напишите, например: «перенеси задачу Подключить диаграмму Гантта на неделю»."
   }
+];
+
+const ganttColumns: IColumnConfig[] = [
+  { id: "text", header: "Название задачи", width: 183, flexgrow: 1, sort: true },
+  { id: "start", header: "Дата начала", width: 120, align: "center", sort: true },
+  { id: "duration", header: "Длительность", width: 100, align: "center", sort: true }
+];
+
+const monthFormatter = new Intl.DateTimeFormat("ru-RU", { month: "long", year: "numeric" });
+const ganttScales: IScaleConfig[] = [
+  { unit: "month", step: 1, format: (value) => monthFormatter.format(value) },
+  { unit: "day", step: 1, format: (value) => String(value.getDate()) }
 ];
 
 async function jsonRequest<T>(url: string, options?: RequestInit): Promise<T> {
@@ -82,12 +95,6 @@ async function streamChat(url: string, options: RequestInit, onStage: (stage: st
   consume(buffer);
   if (!result) throw new Error("Сервер завершил поток без результата");
   return result;
-}
-
-function slack(task: Task): string {
-  if (!task.due_date) return "Срок не задан";
-  const days = Math.round((new Date(`${task.due_date}T00:00:00Z`).getTime() - new Date(`${task.last_day}T00:00:00Z`).getTime()) / 86400000);
-  return days < 0 ? `просрочено на ${Math.abs(days)} дн.` : `${days} дн. в запасе`;
 }
 
 export default function App() {
@@ -366,13 +373,6 @@ export default function App() {
     }
   }
 
-  const successors = selectedTask && plan
-    ? plan.tasks.filter((task) => task.predecessors.includes(selectedTask.id))
-    : [];
-  const predecessors = selectedTask && plan
-    ? selectedTask.predecessors.map((id) => plan.tasks.find((task) => task.id === id)).filter(Boolean) as Task[]
-    : [];
-
   async function shareLink() {
     try {
       await navigator.clipboard.writeText(window.location.href);
@@ -386,7 +386,7 @@ export default function App() {
   return (
     <div className="app-shell">
       <header className="topbar">
-        <div className="brand"><span className="brand-mark">K</span><div><strong>Gaintt</strong><span>план, который держит форму</span></div></div>
+        <div className="brand"><span className="brand-mark">G</span><div><strong>Gaintt</strong><span>план, который держит форму</span></div></div>
         <div className="toolbar">
           <button className="button secondary" onClick={() => void shareLink()} disabled={!plan}>Поделиться ссылкой</button>
           {shareFeedback && <span className="share-feedback">{shareFeedback}</span>}
@@ -397,7 +397,7 @@ export default function App() {
       </header>
 
       <main className="content">
-        <section className="intro-row"><div><p className="eyebrow">WORKING PLAN / {plan ? `v${plan.version}` : "loading"}</p><h1>{plan?.name || "Загружаю план…"}</h1><p className="subhead">Schedule считается на сервере. Перетаскивайте бары или объясняйте правку агенту — результат всегда приходит целиком.</p></div><div className="status-pill"><span className="status-dot" /> один Plan · календарные дни{plan?.member_count !== undefined && plan.member_count > 1 && <span className="presence-badge"> · {plan.member_count} участника в этом Plan</span>}</div></section>
+        <section className="intro-row"><div><p className="eyebrow">РАБОЧИЙ ПЛАН / {plan ? `версия ${plan.version}` : "загрузка"}</p><h1>{plan?.name || "Загружаю план…"}</h1><p className="subhead">Расписание считается на сервере. Перетаскивайте полосы или объясняйте правку агенту — результат всегда приходит целиком.</p></div><div className="status-pill"><span className="status-dot" /> один план · календарные дни{plan?.member_count !== undefined && plan.member_count > 1 && <span className="presence-badge"> · {plan.member_count} участника в этом плане</span>}</div></section>
 
         {remoteNotice && <div className="alert notice">План обновлён другим участником.</div>}
         {error && <div className="alert error">{error}</div>}
@@ -405,9 +405,9 @@ export default function App() {
 
         <section className="workspace">
           <div className="gantt-card">
-            <div className="card-heading"><div><span className="section-kicker">VISUAL SCHEDULE</span><h2>Диаграмма Гантта</h2></div><span className="date-chip">Старт · {plan ? formatDate(plan.plan_start) : "—"}</span></div>
+            <div className="card-heading"><div><span className="section-kicker">ВИЗУАЛЬНЫЙ ГРАФИК</span><h2>Диаграмма Гантта</h2></div><span className="date-chip">Старт · {plan ? formatDate(plan.plan_start) : "—"}</span></div>
             <div className="gantt-wrap">
-              {plan && <Gantt tasks={ganttTasks} links={ganttLinks} init={initGantt} readonly={busy} />}
+              {plan && <Gantt tasks={ganttTasks} links={ganttLinks} columns={ganttColumns} scales={ganttScales} init={initGantt} readonly={busy} />}
             </div>
             <div className="task-legend"><span><i className="legend-swatch normal" /> задача</span><span><i className="legend-swatch overdue" /> срок нарушен</span><span>↔ тяните бар, чтобы задать привязку</span></div>
             <div className="task-index">
@@ -416,9 +416,9 @@ export default function App() {
           </div>
 
           <aside className="chat-card">
-            <div className="card-heading"><div><span className="section-kicker">AGENT CONSOLE</span><h2>Чат с агентом</h2></div><span className="online-dot">●</span></div>
+            <div className="card-heading"><div><span className="section-kicker">ЧАТ С АГЕНТОМ</span><h2>Чат с агентом</h2></div><span className="online-dot">●</span></div>
             <div className="chat-messages">
-              {messages.map((message, index) => <div key={`${index}-${message.content}`} className={`message ${message.role}`}><div className="message-label">{message.role === "assistant" ? "AGENT" : "ВЫ"}</div><div className="message-body">{message.content}</div>{message.changes && message.changes.length > 0 && <div className="change-list">{message.changes.map((change) => <div key={change.label}>✓ {change.label}</div>)}{message.turnId && <button className="revert-button" onClick={() => revert(message.turnId!)} disabled={!plan?.turns?.find((turn) => turn.id === message.turnId)?.can_revert}>Откатить ход</button>}</div>}</div>)}
+              {messages.map((message, index) => <div key={`${index}-${message.content}`} className={`message ${message.role}`}><div className="message-label">{message.role === "assistant" ? "АГЕНТ" : "ВЫ"}</div><div className="message-body">{message.content}</div>{message.changes && message.changes.length > 0 && <div className="change-list">{message.changes.map((change) => <div key={change.label}>✓ {change.label}</div>)}{message.turnId && <button className="revert-button" onClick={() => revert(message.turnId!)} disabled={!plan?.turns?.find((turn) => turn.id === message.turnId)?.can_revert}>Откатить ход</button>}</div>}</div>)}
               {busy && <div className="working"><span className="spinner" /> {stage || "обрабатываю"}</div>}
             </div>
             <form className="chat-form" onSubmit={sendMessage}><textarea aria-label="Сообщение агенту" value={draft} onChange={(event) => setDraft(event.target.value)} placeholder="Например: перенеси всё после релиза на неделю…" disabled={busy} /><button className="send-button" type="submit" disabled={busy || !draft.trim()}>↑</button></form>
@@ -427,7 +427,7 @@ export default function App() {
         </section>
       </main>
 
-      {selectedTask && <div className="modal-backdrop" role="presentation" onClick={() => setSelectedTaskId(null)}><section className="task-modal" role="dialog" aria-modal="true" aria-label={`Задача ${selectedTask.name}`} onClick={(event) => event.stopPropagation()}><button className="modal-close" onClick={() => setSelectedTaskId(null)}>×</button><span className="section-kicker">TASK DETAILS</span><h2>{selectedTask.name}</h2><p className="modal-description">{selectedTask.description || "Описание не задано"}</p><div className="detail-grid"><div><span>Исполнитель</span><strong>{selectedTask.assignee || "Без исполнителя"}</strong></div><div><span>Длительность</span><strong>{selectedTask.duration} дн.</strong></div><div><span>Schedule start</span><strong>{formatDate(selectedTask.start)}</strong></div><div><span>Schedule finish</span><strong>{formatDate(selectedTask.last_day)}</strong></div><div><span>Pinned Start</span><strong>{formatDate(selectedTask.pinned_start)}</strong></div><div><span>Due Date</span><strong className={isOverdue(selectedTask) ? "danger-text" : ""}>{formatDate(selectedTask.due_date)}</strong></div></div><div className="slack-box"><span>Запас до срока</span><strong className={isOverdue(selectedTask) ? "danger-text" : ""}>{slack(selectedTask)}</strong></div><div className="relations"><div><span>Предшественники</span>{predecessors.length ? predecessors.map((task) => <button key={task.id} onClick={() => setSelectedTaskId(task.id)}>{task.name}</button>) : <em>нет</em>}</div><div><span>Последователи</span>{successors.length ? successors.map((task) => <button key={task.id} onClick={() => setSelectedTaskId(task.id)}>{task.name}</button>) : <em>нет</em>}</div></div></section></div>}
+      {selectedTask && plan && <TaskModal plan={plan} task={selectedTask} onClose={() => setSelectedTaskId(null)} onSelectTask={setSelectedTaskId} />}
     </div>
   );
 }

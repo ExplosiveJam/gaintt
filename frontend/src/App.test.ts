@@ -162,6 +162,30 @@ describe("task modal", () => {
   });
 });
 
+describe("Russian interface copy", () => {
+  it("renders the main workspace and task details without leftover English labels", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ plan }), { headers: { "Content-Type": "application/json" } })));
+    vi.stubGlobal("EventSource", FakeEventSource as unknown as typeof EventSource);
+    FakeEventSource.instances = [];
+    container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
+
+    await act(async () => {
+      root?.render(React.createElement(App));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    await act(async () => container?.querySelector<HTMLButtonElement>(".task-index-row")?.click());
+
+    expect(container.querySelector(".brand-mark")?.textContent).toBe("G");
+    expect(container.textContent).toContain("РАБОЧИЙ ПЛАН");
+    expect(container.textContent).toContain("ВИЗУАЛЬНЫЙ ГРАФИК");
+    expect(container.textContent).toContain("ЧАТ С АГЕНТОМ");
+    expect(container.textContent).toContain("НАЧАЛО ПО РАСПИСАНИЮ");
+    expect(container.textContent).not.toMatch(/WORKING PLAN|VISUAL SCHEDULE|AGENT CONSOLE|TASK DETAILS|Schedule start|Pinned Start|Due Date/);
+  });
+});
+
 describe("export and import wire the current plan_id", () => {
   // Regression guard: the backend now requires plan_id on both /api/export
   // (query string, P1-1) and /api/import (multipart field, P1-3) and checks
